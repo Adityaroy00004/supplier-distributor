@@ -35,21 +35,29 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // TODO: Replace with actual authentication API call
-      // Example: const response = await fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(data) });
-      
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // For demo purposes - check credentials
-      if (data.email === "supplier@example.com" && data.password === "password123") {
-        // Successful login - redirect to dashboard
+      const response = await fetch("http://localhost:8080/s2c/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await response.json();
+
+      if (response.ok) {
+        // Successful login
+        localStorage.setItem("token", responseData.token);
+        localStorage.setItem("user", JSON.stringify(responseData));
+        // Redirect to dashboard
         window.location.href = "/supplier/dashboard";
       } else {
-        setError("Invalid email or password. Please try again.");
+        // Handle error
+        setError(responseData.message || responseData.error || "Invalid email or password. Please try again.");
       }
     } catch (err) {
-      setError("An error occurred. Please try again later.");
+      console.error("Login error:", err);
+      setError("An error occurred. Please try again later. Is the backend running?");
     } finally {
       setIsLoading(false);
     }
