@@ -16,16 +16,15 @@ public class JwtConfiguration {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.cors(cors -> cors.configure(http))
-                .csrf()
-                .disable()
-                .authorizeHttpRequests(
-                        auth -> auth.requestMatchers(
-                                        "/s2c/api/v1/supplier/start-registration",
-                                "/s2c/api/v1/auth/login"
-                                ).permitAll()
-                                .anyRequest().authenticated()
-                )
+        return http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/s2c/api/v1/supplier/start-registration",
+                                "/s2c/api/v1/auth/login")
+                        .permitAll()
+                        .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

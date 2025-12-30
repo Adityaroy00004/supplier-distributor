@@ -8,4 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
+    boolean existsByGstNumber(String gstNumber);
 }

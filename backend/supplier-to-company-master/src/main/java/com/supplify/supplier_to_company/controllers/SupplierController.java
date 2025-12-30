@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.supplify.supplier_to_company.dtos.SupplierRegistrationDto;
 import com.supplify.supplier_to_company.models.Supplier;
+import com.supplify.supplier_to_company.exceptions.DuplicateResourceException;
 import com.supplify.supplier_to_company.services.SupplierService;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +33,12 @@ public class SupplierController {
             @RequestPart(value = "isoCertificate") MultipartFile isoCertificate,
             @RequestPart(value = "msmeCertificate") MultipartFile msmeCertificate,
             @RequestPart(value = "insurancePapers") MultipartFile insurancePapers,
-            @RequestPart(value = "companyLogo") MultipartFile companyLogo,
-            @RequestPart(value = "supplierInformation") String supplierInfo
-            ) {
+            @RequestPart(value = "companyLogo", required = false) MultipartFile companyLogo,
+            @RequestPart(value = "supplierInformation") String supplierInfo) {
 
         try {
-            SupplierRegistrationDto supplierRegistrationDto = objectMapper.readValue(supplierInfo, SupplierRegistrationDto.class);
+            SupplierRegistrationDto supplierRegistrationDto = objectMapper.readValue(supplierInfo,
+                    SupplierRegistrationDto.class);
 
             Supplier supplier = supplierService.registerSupplier(
                     gstCertificate,
@@ -47,8 +48,7 @@ public class SupplierController {
                     msmeCertificate,
                     insurancePapers,
                     companyLogo,
-                    supplierRegistrationDto
-            );
+                    supplierRegistrationDto);
 
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("message", "Supplier registration started successfully");
@@ -60,6 +60,11 @@ public class SupplierController {
             errorResponse.put("error", "Invalid supplier information format");
             errorResponse.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
+        } catch (DuplicateResourceException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Duplicate Resource");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(409).body(errorResponse);
         } catch (RuntimeException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to process supplier registration");

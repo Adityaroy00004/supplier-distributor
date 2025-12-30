@@ -30,57 +30,61 @@ public class JwtUtil {
     UserService userService;
 
     public String generateJwtToken(String email,
-                                   List<String> roles){
+            List<String> roles) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("email", email);
         claims.put("roles", roles);
         String jwtToken = Jwts.builder()
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .setIssuedAt(new Date())
-                .signWith(SignatureAlgorithm.HS256, secretPassword)
+                .signWith(
+                        io.jsonwebtoken.security.Keys
+                                .hmacShaKeyFor(secretPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                        SignatureAlgorithm.HS256)
                 .setClaims(claims)
                 .compact();
         return jwtToken;
     }
 
-    public Claims decryptToken(String token){
+    public Claims decryptToken(String token) {
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretPassword)
+                .setSigningKey(io.jsonwebtoken.security.Keys
+                        .hmacShaKeyFor(secretPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
         return claims;
     }
-    public boolean isTokenValid(String token){
-        Claims  claims = this.decryptToken(token);
+
+    public boolean isTokenValid(String token) {
+        Claims claims = this.decryptToken(token);
         String email = claims.get("email", String.class);
         List<String> roles = claims.get("roles", List.class);
         log.info("Hello Somendra : " + roles);
 
         User user = userService.findByEmail(email);
-        if(user == null){
+        if (user == null) {
             return false;
         }
         List<Role> userRoles = user.getRoles();
-        for(int i  = 0; i < roles.size(); i++){
+        for (int i = 0; i < roles.size(); i++) {
             String roleName = roles.get(i);
             boolean flag = false;
-            for(int j = 0; j < userRoles.size(); j++){
-                if(roleName.equals(userRoles.get(j).getName())){
+            for (int j = 0; j < userRoles.size(); j++) {
+                if (roleName.equals(userRoles.get(j).getName())) {
                     flag = true;
                     break;
                 }
             }
-            if(flag == false){
+            if (flag == false) {
                 return false;
             }
         }
         return true;
     }
 
-    public Long getExpirationTime(){
+    public Long getExpirationTime() {
         return expirationTime;
     }
-
 
 }

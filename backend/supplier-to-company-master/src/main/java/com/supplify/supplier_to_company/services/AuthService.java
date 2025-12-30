@@ -1,6 +1,5 @@
 package com.supplify.supplier_to_company.services;
 
-
 import com.supplify.supplier_to_company.dtos.AuthResponseDto;
 import com.supplify.supplier_to_company.dtos.UserLoginDto;
 import com.supplify.supplier_to_company.exceptions.InvalidCredentialsException;
@@ -34,17 +33,27 @@ public class AuthService {
     @Autowired
     SupplierService supplierService;
 
-    public AuthResponseDto authenticateUser(UserLoginDto userLoginDto){
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+
+    public AuthResponseDto authenticateUser(UserLoginDto userLoginDto) {
         String email = userLoginDto.getEmail();
+        logger.info("Attempting to authenticate user: {}", email);
         // We need to check that this email exists in our user table or not.
         // AuthService -> UserService -> UserRepository
         User user = userService.findByEmail(email);
-        if(user == null){
-            throw new UserNotFoundException(String.format("User with id %s does not exist in the system.", userLoginDto.getEmail()));
+        if (user == null) {
+            logger.error("User not found for email: {}", email);
+            throw new UserNotFoundException(
+                    String.format("User with id %s does not exist in the system.", userLoginDto.getEmail()));
         }
-        if(!userLoginDto.getPassword().equals(user.getPassword())){
+        if (!userLoginDto.getPassword().equals(user.getPassword())) {
+            logger.error("Invalid credentials for user: {}", email);
+            // Log plain password comparison for debug only (Be careful in prod!)
+            logger.debug("Provided password: '{}', Stored password: '{}'", userLoginDto.getPassword(),
+                    user.getPassword());
             throw new InvalidCredentialsException(String.format("User entered wrong password"));
         }
+        logger.info("User authenticated successfully: {}", email);
         AuthResponseDto authResponseDto = new AuthResponseDto();
         authResponseDto.setUserId(user.getId());
         authResponseDto.setEmail(user.getEmail());
@@ -56,43 +65,41 @@ public class AuthService {
         authResponseDto.setToken(token);
         return authResponseDto;
     }
-    public List<Role> getAllOrgRolesByUserSession(String token){
+
+    public List<Role> getAllOrgRolesByUserSession(String token) {
         Claims claims = jwtUtil.decryptToken(token);
         String email = claims.get("email", String.class);
         List<String> roles = claims.get("roles", List.class);
         boolean isAccess = this.isAccessAvailable(roles, "see_all_available_roles");
-        if(!isAccess){
+        if (!isAccess) {
             throw new UnAuthorizedException(String.format("User is not having access to check all org roles"));
         }
         User user = userService.findByEmail(email);
-        if(user.getUserType().equals("SUPPLIER_USER")){
+        if (user.getUserType().equals("SUPPLIER_USER")) {
             String orgName = supplierService.getSupplierNameBySupplierUser(user);
             return roleService.getRoleByOrgName(orgName);
         }
         return new ArrayList<>();
     }
 
-    public boolean isAccessAvailable(List<String> userRoles, String operationName){
-        for(String roleName : userRoles){
+    public boolean isAccessAvailable(List<String> userRoles, String operationName) {
+        for (String roleName : userRoles) {
             boolean res = this.checkRoleIsHavingAccessForGivenOperation(roleName, operationName);
-            if(res == true){
+            if (res == true) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean checkRoleIsHavingAccessForGivenOperation(String roleName, String operationName){
+    public boolean checkRoleIsHavingAccessForGivenOperation(String roleName, String operationName) {
         Role role = roleService.findByName(roleName);
-        for(Operation operation : role.getOperations()){
-            if(operation.getName().equals(operationName)){
+        for (Operation operation : role.getOperations()) {
+            if (operation.getName().equals(operationName)) {
                 return true;
             }
         }
         return false;
     }
-
-
-
 
 }

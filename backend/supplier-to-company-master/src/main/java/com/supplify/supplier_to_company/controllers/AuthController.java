@@ -1,6 +1,5 @@
 package com.supplify.supplier_to_company.controllers;
 
-
 import com.supplify.supplier_to_company.dtos.AuthResponseDto;
 import com.supplify.supplier_to_company.dtos.UserLoginDto;
 import com.supplify.supplier_to_company.exceptions.InvalidCredentialsException;
@@ -24,22 +23,28 @@ public class AuthController {
     @Autowired
     AuthService authService;
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthController.class);
+
     @PostMapping("/login")
-    public ResponseEntity loginUser(@RequestBody UserLoginDto userLoginDto){
-        try{
+    public ResponseEntity loginUser(@RequestBody UserLoginDto userLoginDto) {
+        logger.info("Received login request for email: {}", userLoginDto.getEmail());
+        try {
             AuthResponseDto authResponseDto = authService.authenticateUser(userLoginDto);
             return new ResponseEntity(authResponseDto, HttpStatus.OK);
-        }catch (UserNotFoundException e){
+        } catch (UserNotFoundException e) {
+            logger.error("UserNotFoundException during login: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Invalid Email");
             errorResponse.put("message", e.getMessage());
             return new ResponseEntity(errorResponse, HttpStatus.UNAUTHORIZED); // 401
-        }catch (InvalidCredentialsException e){
+        } catch (InvalidCredentialsException e) {
+            logger.error("InvalidCredentialsException during login: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Incorrect Password");
             errorResponse.put("message", e.getMessage());
             return new ResponseEntity(errorResponse, HttpStatus.UNAUTHORIZED);
-        }catch (Exception e){
+        } catch (Exception e) {
+            logger.error("Exception during login", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to Login due to server side issue");
             errorResponse.put("message", e.getMessage());
@@ -48,16 +53,16 @@ public class AuthController {
     }
 
     @GetMapping("/roles")
-    public ResponseEntity getOrganisationRolesByUserSession(@RequestHeader String Authorization){
-        try{
+    public ResponseEntity getOrganisationRolesByUserSession(@RequestHeader String Authorization) {
+        try {
             List<Role> roles = authService.getAllOrgRolesByUserSession(Authorization);
             return new ResponseEntity<>(roles, HttpStatus.OK);
-        }catch (UnAuthorizedException e){
+        } catch (UnAuthorizedException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "UnAuthorized");
             errorResponse.put("message", e.getMessage());
             return new ResponseEntity(errorResponse, HttpStatus.UNAUTHORIZED);
-        }catch (Exception e){
+        } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to fetch roles");
             errorResponse.put("message", e.getMessage());
